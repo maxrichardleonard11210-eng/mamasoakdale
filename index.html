@@ -2,25 +2,87 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <!-- TODO: Set the document title to the name of your application -->
-    <title>Lovable App</title>
-    <meta name="description" content="Lovable Generated Project" />
-    <meta name="author" content="Lovable" />
-
-    <!-- TODO: Update og:title to match your application name -->
-    <meta property="og:title" content="Lovable App" />
-    <meta property="og:description" content="Lovable Generated Project" />
-    <meta property="og:type" content="website" />
+    
+    <!-- SEO Meta Tags -->
+    <title>Mama's Oakdale | Classic Italian Restaurant in Oakdale, NY</title>
+    <meta name="description" content="Mama's Oakdale serves authentic Italian cuisine made with heart. Family recipes, fresh pasta, wood-fired pizza. Dine-in, takeout & delivery in Oakdale, NY. Call (631) 589-9640." />
+    <meta name="keywords" content="Italian restaurant, Oakdale NY, pasta, pizza, family restaurant, Long Island Italian food" />
+    
+    <!-- Open Graph -->
+    <meta property="og:title" content="Mama's Oakdale | Classic Italian Restaurant" />
+    <meta property="og:description" content="Classic Italian. Made with Heart. Authentic family recipes served in Oakdale, NY." />
+    <meta property="og:type" content="restaurant" />
+    <meta property="og:locale" content="en_US" />
     <meta property="og:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
-
+    
+    <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:site" content="@Lovable" />
     <meta name="twitter:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
+    
+    <!-- Geo Tags -->
+    <meta name="geo.region" content="US-NY" />
+    <meta name="geo.placename" content="Oakdale" />
+    
+    <!-- Canonical -->
+    <link rel="canonical" href="https://mamasoakdale.com" />
   </head>
-
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    
+    <!-- JSON-LD Structured Data -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Restaurant",
+      "name": "Mama's Oakdale",
+      "image": "",
+      "url": "https://mamasoakdale.com",
+      "telephone": "(631) 589-9640",
+      "priceRange": "$20-30",
+      "servesCuisine": "Italian",
+      "address": {
+        "@type": "PostalAddress",
+        "streetAddress": "587 Montauk Hwy",
+        "addressLocality": "Oakdale",
+        "addressRegion": "NY",
+        "postalCode": "11769",
+        "addressCountry": "US"
+      },
+      "geo": {
+        "@type": "GeoCoordinates",
+        "latitude": 40.7389,
+        "longitude": -73.1389
+      },
+      "aggregateRating": {
+        "@type": "AggregateRating",
+        "ratingValue": "4.4",
+        "reviewCount": "239"
+      },
+      "openingHoursSpecification": [
+        {
+          "@type": "OpeningHoursSpecification",
+          "dayOfWeek": ["Tuesday", "Wednesday", "Thursday"],
+          "opens": "11:00",
+          "closes": "21:00"
+        },
+        {
+          "@type": "OpeningHoursSpecification",
+          "dayOfWeek": ["Friday", "Saturday"],
+          "opens": "11:00",
+          "closes": "22:00"
+        },
+        {
+          "@type": "OpeningHoursSpecification",
+          "dayOfWeek": "Sunday",
+          "opens": "12:00",
+          "closes": "20:00"
+        }
+      ]
+    }
+    </script>
   </body>
 </html>
