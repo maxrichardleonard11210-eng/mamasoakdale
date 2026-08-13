@@ -72,11 +72,11 @@ export function Hero() {
 
           {/* CTAs */}
           <div className="flex flex-col sm:flex-row gap-4 animate-fade-up stagger-4">
-            <Button variant="hero" size="xl">
-              Reserve a Table
+            <Button variant="hero" size="xl" asChild>
+              <a href="tel:6315899640">Reserve a Table</a>
             </Button>
-            <Button variant="heroOutline" size="xl">
-              Order Online
+            <Button variant="heroOutline" size="xl" asChild>
+              <a href="tel:6315899640">Order Online</a>
             </Button>
           </div>
         </div>

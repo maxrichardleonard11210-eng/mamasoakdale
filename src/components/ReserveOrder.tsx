@@ -18,17 +18,23 @@ export function ReserveOrder() {
             variant="secondary"
             size="xl"
             className="bg-cream text-foreground hover:bg-cream/90"
+            asChild
           >
-            <Calendar className="h-5 w-5 mr-2" />
-            Reserve a Table
+            <a href="tel:6315899640">
+              <Calendar className="h-5 w-5 mr-2" />
+              Reserve a Table
+            </a>
           </Button>
           <Button
             variant="outline"
             size="xl"
             className="border-cream/50 text-cream hover:bg-cream hover:text-foreground"
+            asChild
           >
-            <ShoppingBag className="h-5 w-5 mr-2" />
-            Order Online
+            <a href="tel:6315899640">
+              <ShoppingBag className="h-5 w-5 mr-2" />
+              Order Online
+            </a>
           </Button>
         </div>
       </div>

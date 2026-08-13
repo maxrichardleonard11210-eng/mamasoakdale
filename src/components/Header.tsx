@@ -64,8 +64,8 @@ export function Header() {
               <Phone className="h-4 w-4" />
               (631) 589-9640
             </a>
-            <Button variant="hero" size="default">
-              Reserve a Table
+            <Button variant="hero" size="default" asChild>
+              <a href="tel:6315899640">Reserve a Table</a>
             </Button>
           </div>
 
@@ -100,8 +100,8 @@ export function Header() {
                 <Phone className="h-4 w-4" />
                 (631) 589-9640
               </a>
-              <Button variant="hero" size="lg" className="mt-2 w-full">
-                Reserve a Table
+              <Button variant="hero" size="lg" className="mt-2 w-full" asChild>
+                <a href="tel:6315899640">Reserve a Table</a>
               </Button>
             </div>
           </div>
