@@ -1,73 +1,48 @@
-# Welcome to your Lovable project
+# Rake
 
-## Project info
+A free-to-play casino simulator. Everything runs on **Rake Coins**, which are virtual, have no cash value, and can't be bought or redeemed. There are no deposits, withdrawals, or prizes.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+## Games
 
-## How can I edit this code?
+| Game | How it works |
+| --- | --- |
+| **Flyaway** | Plane-themed rounds that run back to back. Place up to two bets while passengers board, then cash out before the plane flies away. Each bet can have its own auto cash out. |
+| **Crash** | Every bet starts its own round. The line climbs until it crashes; cash out manually or set an auto cash out. |
+| **Dice** | Drag the target, choose roll over or under. Payout = 99 ÷ win chance. |
+| **Limbo** | Pick a target multiplier; win if the result lands at or above it. |
+| **Mines** | 5×5 grid with 1–24 mines. Every gem you find raises the multiplier. Cash out any time. |
+| **Plinko** | 8–16 rows, low/medium/high risk, multiple balls at once, plus auto-drop. |
+| **Blackjack** | Infinite deck, dealer peeks and stands on all 17s, blackjack pays 3:2, double on the first two cards. |
 
-There are several ways of editing your application.
+## Features
 
-**Use Lovable**
+- **Wallet:** you start with 10,000 coins. A daily bonus adds 10,000, and a refill to 1,000 unlocks when you're broke.
+- **Provably fair:** results come from `HMAC-SHA256(serverSeed, "clientSeed:nonce:round")`. You see the hashed server seed before you play. Rotating the seed pair reveals the old seed, and the **Verify** tab recomputes any past result.
+- **Your history:** bet history and stats (bets, wagered, profit, best multiplier).
+- **Layout:** works on desktop and mobile.
+- **No setup:** no build step and no dependencies. It's plain HTML, CSS and JavaScript, and progress is saved in the browser's `localStorage`.
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+## Run it
 
-Changes made via Lovable will be committed automatically to this repo.
+Open `rake/index.html` in a browser, or serve the folder:
 
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+```bash
+cd rake && python3 -m http.server 8000
 ```
 
-**Edit a file directly in GitHub**
+Then visit http://localhost:8000.
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+To host it for free, deploy the `rake/` folder to any static host (GitHub Pages, Netlify, Vercel, Cloudflare Pages).
 
-**Use GitHub Codespaces**
+## Files
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+```
+rake/
+  index.html          page shell
+  css/style.css       all styles
+  js/core.js          wallet, storage, SHA-256/HMAC, provably-fair RNG, UI helpers
+  js/app.js           navigation, lobby, wallet and fairness dialogs
+  js/games/*.js       one file per game; each calls Rake.register({...})
+```
 
-## What technologies are used for this project?
-
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+To add a game, create `js/games/<name>.js` that calls `Rake.register({ id, name, mount, verify })` and add a `<script>` tag for it in `index.html`.
