@@ -22,42 +22,59 @@
   R.wallet.onChange(renderBalance);
 
   /* ---------------- Sidebar ---------------- */
+  const CATS = [
+    { id: "slots", name: "Slots" },
+    { id: "originals", name: "Rake Originals" },
+  ];
+  const catOf = (g) => g.category || "originals";
   function renderSidebar() {
     const nav = $("#sidebar");
+    const link = (id) => {
+      const g = R.games[id];
+      return `<a class="nav-link" href="#/${id}" data-id="${id}"><span class="nav-ico" style="background:${g.color}">${g.icon}</span>${esc(g.name)}</a>`;
+    };
     nav.innerHTML = `
       <a class="nav-link" href="#/" data-id=""><span class="nav-ico" style="background:var(--raised)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg></span>Lobby</a>
-      <div class="nav-section">Rake Originals</div>
-      ${R.order
-        .map((id) => {
-          const g = R.games[id];
-          return `<a class="nav-link" href="#/${id}" data-id="${id}"><span class="nav-ico" style="background:${g.color}">${g.icon}</span>${esc(g.name)}</a>`;
-        })
-        .join("")}`;
+      <button class="nav-link nav-btn" data-act="vip"><span class="nav-ico" style="background:var(--raised)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8l4 4 5-7 5 7 4-4-2 11H5z"/></svg></span>VIP &amp; Rakeback</button>
+      ${CATS.map((c) => `<div class="nav-section">${c.name}</div>${R.order.filter((id) => catOf(R.games[id]) === c.id).map(link).join("")}`).join("")}`;
+    $('[data-act="vip"]', nav).onclick = openVip;
   }
 
   /* ---------------- Lobby ---------------- */
+  let lobbyCat = "all";
+  let lobbyQuery = "";
+  function tileHtml(id) {
+    const g = R.games[id];
+    return `<a class="tile" href="#/${id}" style="background:${g.tileBg || g.color}">
+      ${g.isNew ? '<span class="tile-new">NEW</span>' : ""}
+      <div class="tile-art">${g.art || g.icon}</div>
+      <div class="tile-name">${esc(g.name)}</div><div class="tile-tag">${esc(g.tagline)}</div></a>`;
+  }
   function renderLobby(view) {
     const s = R.history.stats;
+    const lvl = R.vip.current();
     view.innerHTML = `
       <section class="hero">
         <span class="hero-badge">Free to play · No real money</span>
         <h1>Play the <span>Rake</span> originals.</h1>
-        <p>Seven fast casino games, all running on virtual coins. Every result is provably fair, and you can top up for free whenever you run dry.</p>
+        <p>${R.order.length} games, including slots, running on free virtual coins. Every result is provably fair, every bet earns rakeback, and you can top up for free whenever you run dry.</p>
         <div class="hero-actions">
-          <a class="btn btn-accent btn-lg" href="#/flyaway">Play Flyaway</a>
+          <a class="btn btn-accent btn-lg" href="#/riches">Spin Rake Riches</a>
+          <a class="btn btn-ghost btn-lg" href="#/flyaway">Play Flyaway</a>
           <button class="btn btn-ghost btn-lg" data-act="wallet">Claim free coins</button>
         </div>
       </section>
-      <div class="section-head"><h2>Rake Originals</h2><span class="muted">${R.order.length} games</span></div>
-      <div class="tiles">${R.order
-        .map((id) => {
-          const g = R.games[id];
-          return `<a class="tile" href="#/${id}" style="background:${g.tileBg || g.color}">
-            ${g.isNew ? '<span class="tile-new">NEW</span>' : ""}
-            <div class="tile-art">${g.art || g.icon}</div>
-            <div class="tile-name">${esc(g.name)}</div><div class="tile-tag">${esc(g.tagline)}</div></a>`;
-        })
-        .join("")}</div>
+      <div class="vip-strip card" data-act="vip">
+        <span class="vip-badge" style="--c:${lvl.color}">${esc(lvl.name)}</span>
+        <div class="vip-strip-bar"><div class="vip-bar"><div style="width:${(R.vip.progress() * 100).toFixed(1)}%;background:${lvl.color}"></div></div>
+          <span class="muted">${R.vip.next() ? `${(R.vip.progress() * 100).toFixed(1)}% to ${esc(R.vip.next().name)}` : "Top level reached"}</span></div>
+        <span class="vip-strip-rb">Rakeback <b class="mono">${fmt(Math.floor(R.vip.rakeback * 100) / 100)}</b></span>
+      </div>
+      <div class="lobby-bar">
+        <div class="input-group lobby-search"><span class="input-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg></span><input class="input" placeholder="Search games" data-q style="font-family:var(--sans)"></div>
+        <div class="chips">${[{ id: "all", name: "All games" }, ...CATS].map((c) => `<button class="chip ${c.id === lobbyCat ? "on" : ""}" data-cat="${c.id}">${c.name}</button>`).join("")}</div>
+      </div>
+      <div data-slot="games"></div>
       <div class="section-head"><h2>Your stats</h2></div>
       <div class="stats-row">
         <div class="stat"><div class="stat-label">Bets placed</div><div class="stat-value">${s.bets.toLocaleString()}</div></div>
@@ -68,6 +85,33 @@
       <div class="section-head"><h2>Recent bets</h2></div>
       <div data-slot="bets"></div>`;
     $('[data-act="wallet"]', view).onclick = openWallet;
+    $('.vip-strip', view).onclick = openVip;
+    const slot = $('[data-slot="games"]', view);
+    const q = $("[data-q]", view);
+    q.value = lobbyQuery;
+    function renderGames() {
+      const term = lobbyQuery.trim().toLowerCase();
+      const match = (id) => {
+        const g = R.games[id];
+        return !term || (g.name + " " + g.tagline).toLowerCase().includes(term);
+      };
+      const cats = lobbyCat === "all" ? CATS : CATS.filter((c) => c.id === lobbyCat);
+      const html = cats
+        .map((c) => {
+          const ids = R.order.filter((id) => catOf(R.games[id]) === c.id && match(id));
+          if (!ids.length) return "";
+          return `<div class="section-head"><h2>${c.name}</h2><span class="muted">${ids.length} game${ids.length === 1 ? "" : "s"}</span></div><div class="tiles">${ids.map(tileHtml).join("")}</div>`;
+        })
+        .join("");
+      slot.innerHTML = html || `<div class="empty card" style="margin-top:20px">No games match "${esc(lobbyQuery)}".</div>`;
+    }
+    q.addEventListener("input", () => { lobbyQuery = q.value; renderGames(); });
+    $$("[data-cat]", view).forEach((b) => (b.onclick = () => {
+      lobbyCat = b.dataset.cat;
+      $$("[data-cat]", view).forEach((x) => x.classList.toggle("on", x === b));
+      renderGames();
+    }));
+    renderGames();
     const t = R.ui.betsTable(null, 15);
     $('[data-slot="bets"]', view).appendChild(t.el);
     return t.destroy;
@@ -123,6 +167,7 @@
       <p>Rake Coins are free play money with no cash value. They can't be purchased or withdrawn.</p>
       <button class="btn btn-accent btn-block btn-lg" data-daily></button>
       <button class="btn btn-ghost btn-block" data-refill></button>
+      <button class="btn btn-ghost btn-block" data-vip>VIP &amp; Rakeback</button>
       <div class="stats-row" data-stats></div>
     </div>`);
     let timer;
@@ -155,6 +200,7 @@
       R.ui.toast(`+${fmt(DAILY)} coins added`, "success");
       render();
     };
+    $("[data-vip]", body).onclick = () => { $(".modal-close").click(); openVip(); };
     $("[data-refill]", body).onclick = () => {
       if (R.wallet.balance >= 1) return;
       R.wallet.credit(round2(REFILL_TO - R.wallet.balance));
@@ -165,6 +211,54 @@
     timer = setInterval(() => { if (!body.isConnected) clearInterval(timer); else render(); }, 1000);
     R.ui.modal("Wallet", body);
   }
+
+  /* ---------------- VIP modal ---------------- */
+  function openVip() {
+    const body = el(`<div style="display:flex;flex-direction:column;gap:14px"></div>`);
+    function render() {
+      const i = R.vip.index(), lvl = R.vip.levels[i], nxt = R.vip.next();
+      const w = R.history.stats.wagered;
+      const rb = Math.floor(R.vip.rakeback * 100) / 100;
+      body.innerHTML = `
+        <div class="vip-card" style="--c:${lvl.color}">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <span class="vip-badge" style="--c:${lvl.color}">${esc(lvl.name)}</span>
+            <span class="muted mono">${fmt(w)} wagered</span></div>
+          <div class="vip-bar" style="margin-top:14px"><div style="width:${(R.vip.progress() * 100).toFixed(1)}%;background:${lvl.color}"></div></div>
+          <div class="muted" style="margin-top:8px;font-size:13px">${nxt ? `Wager ${fmt(nxt.min - w)} more to reach <b style="color:${nxt.color}">${esc(nxt.name)}</b>` : "You've reached the top level."}</div>
+        </div>
+        <div class="stat" style="display:flex;justify-content:space-between;align-items:center;gap:12px">
+          <div><div class="stat-label">Rakeback ready to claim</div><div class="stat-value" style="display:flex;gap:8px;align-items:center">${R.ui.coin}${fmt(rb)}</div>
+          <div class="muted" style="font-size:12px;margin-top:4px">You earn ${Math.round(lvl.rb * 100)}% of the house edge back on every bet.</div></div>
+          <button class="btn btn-accent" data-claim ${rb < 0.01 ? "disabled" : ""}>Claim</button>
+        </div>
+        <div class="card table-wrap"><table class="bets"><thead><tr><th>Level</th><th class="num">Wagered</th><th class="num">Rakeback</th></tr></thead><tbody>
+          ${R.vip.levels.map((l, k) => `<tr${k === i ? ' style="background:var(--panel-2)"' : ""}><td><span class="vip-badge sm" style="--c:${l.color}">${esc(l.name)}</span></td><td class="num">${fmt(l.min)}</td><td class="num">${Math.round(l.rb * 100)}% of edge</td></tr>`).join("")}
+        </tbody></table></div>
+        <p style="font-size:12px">All rewards are virtual Rake Coins with no cash value.</p>`;
+      const btn = $("[data-claim]", body);
+      btn.onclick = () => {
+        const got = R.vip.claim();
+        if (got) R.ui.toast(`Claimed ${fmt(got)} rakeback`, "success");
+        render();
+      };
+    }
+    render();
+    const off = R.vip.onChange(() => { if (!body.isConnected) off(); else render(); });
+    R.ui.modal("VIP & Rakeback", body);
+  }
+  R.openVip = openVip;
+
+  const vipBtn = $("#vip-btn");
+  function renderVipChip() {
+    const lvl = R.vip.current();
+    vipBtn.style.setProperty("--c", lvl.color);
+    $("[data-vip-name]", vipBtn).textContent = lvl.name;
+    $("[data-vip-ring]", vipBtn).style.setProperty("--p", (R.vip.progress() * 100).toFixed(1) + "%");
+  }
+  vipBtn.onclick = openVip;
+  R.vip.onChange(renderVipChip);
+  renderVipChip();
 
   /* ---------------- Fairness modal ---------------- */
   function openFairness(gameId) {

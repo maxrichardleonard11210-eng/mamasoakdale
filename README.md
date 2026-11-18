@@ -6,6 +6,8 @@ A free-to-play casino simulator. Everything runs on **Rake Coins**, which are vi
 
 | Game | How it works |
 | --- | --- |
+| **Rake Riches** (slot) | 5 reels, 3 rows, 10 lines. The R coin is wild. 3+ Free spins stars award 10 free spins where every win pays ×2 (can retrigger). RTP 97.55%, calculated exactly. |
+| **Classic 7s** (slot) | 3 reels, 5 lines, old-school fruit symbols with a wild. RTP 96.67%, calculated exactly. |
 | **Flyaway** | Plane-themed rounds that run back to back. Place up to two bets while passengers board, then cash out before the plane flies away. Each bet can have its own auto cash out. |
 | **Crash** | Every bet starts its own round. The line climbs until it crashes; cash out manually or set an auto cash out. |
 | **Dice** | Drag the target, choose roll over or under. Payout = 99 ÷ win chance. |
@@ -16,6 +18,10 @@ A free-to-play casino simulator. Everything runs on **Rake Coins**, which are vi
 
 ## Features
 
+- **VIP & rakeback:** six levels (Unranked → Diamond) based on total wagered. Every bet earns rakeback, a share of the house edge (5–20% by level) that you can claim any time.
+- **Auto betting:** Dice and Limbo have an Auto tab with a bet count, increase-on-win/loss, and stop-on-profit/loss. Slots have 10–100 auto spins plus turbo. Plinko has auto-drop.
+- **Lobby:** search, plus category filters for Slots and Rake Originals.
+
 - **Wallet:** you start with 10,000 coins. A daily bonus adds 10,000, and a refill to 1,000 unlocks when you're broke.
 - **Provably fair:** results come from `HMAC-SHA256(serverSeed, "clientSeed:nonce:round")`. You see the hashed server seed before you play. Rotating the seed pair reveals the old seed, and the **Verify** tab recomputes any past result.
 - **Your history:** bet history and stats (bets, wagered, profit, best multiplier).
@@ -24,24 +30,24 @@ A free-to-play casino simulator. Everything runs on **Rake Coins**, which are vi
 
 ## Run it
 
-Open `rake/index.html` in a browser, or serve the folder:
+Open `index.html` in a browser, or serve the folder:
 
 ```bash
-cd rake && python3 -m http.server 8000
+python3 -m http.server 8000
 ```
 
 Then visit http://localhost:8000.
 
-To host it for free, deploy the `rake/` folder to any static host (GitHub Pages, Netlify, Vercel, Cloudflare Pages).
+It's live on GitHub Pages from the `main` branch. The old Mama's Oakdale site is kept on the `mamas-oakdale-backup` branch.
 
 ## Files
 
 ```
-rake/
   index.html          page shell
   css/style.css       all styles
   js/core.js          wallet, storage, SHA-256/HMAC, provably-fair RNG, UI helpers
-  js/app.js           navigation, lobby, wallet and fairness dialogs
+  js/app.js           navigation, lobby, wallet, VIP and fairness dialogs
+  js/slots-engine.js  reel strips, paylines, wilds, scatters, free spins
   js/games/*.js       one file per game; each calls Rake.register({...})
 ```
 

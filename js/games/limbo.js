@@ -51,24 +51,26 @@
 
       let raf, pending = null;
       function finish() {
-        const { amount, t, result, won, nonce } = pending;
+        const { amount, t, result, won, nonce, resolve } = pending;
         pending = null;
-        R.settle("limbo", amount, won ? t : 0, nonce);
+        const payout = R.settle("limbo", amount, won ? t : 0, nonce);
+        resolve({ payout });
         recent.unshift({ result, won });
         if (recent.length > 12) recent.pop();
         busy = false;
       }
-      function play() {
-        if (busy) return;
-        const amount = bet.get();
+      function play(amt) {
+        return new Promise((resolve) => {
+        if (busy) return resolve(null);
+        const amount = amt != null ? amt : bet.get();
         const t = target();
-        if (!R.wallet.debit(amount)) return;
+        if (!R.wallet.debit(amount)) return resolve(null);
         busy = true;
         btn.disabled = true;
         const { floats, nonce } = R.fair.next(1);
         const result = R.crashPoint(floats[0]);
         const won = result >= t;
-        pending = { amount, t, result, won, nonce };
+        pending = { amount, t, result, won, nonce, resolve };
         num.classList.remove("won", "lost");
         const start = performance.now();
         const dur = 450;
@@ -87,10 +89,13 @@
           }
         };
         raf = requestAnimationFrame(tick);
+        });
       }
-      btn.onclick = play;
+      btn.onclick = () => play();
+      const modes = R.ui.betModes({ controls, bet, manualEls: [btn], playOnce: play, delay: 150 });
       render();
       return () => {
+        modes.stop();
         if (raf) cancelAnimationFrame(raf);
         if (pending) finish(); // left mid-animation: pay out the already-decided bet
 

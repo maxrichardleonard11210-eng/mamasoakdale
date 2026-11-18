@@ -208,11 +208,60 @@
   };
   R.history = history;
 
+  /* ---------------- VIP levels & rakeback ----------------
+   * Levels come from total wagered. Every bet earns rakeback: a share of the 1% house edge, paid back on demand. */
+  const VIP_LEVELS = [
+    { name: "Unranked", min: 0, color: "#8b94a8", rb: 0.05 },
+    { name: "Bronze", min: 10000, color: "#d08a4e", rb: 0.08 },
+    { name: "Silver", min: 50000, color: "#c9d1e0", rb: 0.1 },
+    { name: "Gold", min: 250000, color: "#ffc94a", rb: 0.12 },
+    { name: "Platinum", min: 1000000, color: "#7ee8ff", rb: 0.15 },
+    { name: "Diamond", min: 5000000, color: "#b9a3ff", rb: 0.2 },
+  ];
+  const vip = {
+    levels: VIP_LEVELS,
+    rakeback: store.get("rakeback", 0),
+    listeners: new Set(),
+    index(w = history.stats.wagered) {
+      let i = 0;
+      while (i + 1 < VIP_LEVELS.length && w >= VIP_LEVELS[i + 1].min) i++;
+      return i;
+    },
+    current() { return VIP_LEVELS[this.index()]; },
+    next() { return VIP_LEVELS[this.index() + 1] || null; },
+    progress() {
+      const i = this.index(), cur = VIP_LEVELS[i], nxt = VIP_LEVELS[i + 1];
+      if (!nxt) return 1;
+      return clamp((history.stats.wagered - cur.min) / (nxt.min - cur.min), 0, 1);
+    },
+    accrue(bet) {
+      this.rakeback = Math.round((this.rakeback + bet * 0.01 * this.current().rb) * 1e6) / 1e6;
+      store.set("rakeback", this.rakeback);
+    },
+    claim() {
+      const amt = floor2(this.rakeback);
+      if (amt < 0.01) return 0;
+      this.rakeback = Math.round((this.rakeback - amt) * 1e6) / 1e6;
+      store.set("rakeback", this.rakeback);
+      wallet.credit(amt);
+      this.emit();
+      return amt;
+    },
+    emit() { this.listeners.forEach((f) => f()); },
+    onChange(f) { this.listeners.add(f); return () => this.listeners.delete(f); },
+  };
+  R.vip = vip;
+
   /** Pay out a finished bet and log it. Returns the payout. */
   R.settle = function (gameId, bet, mult, nonce) {
     const payout = round2(bet * mult);
     if (payout > 0) wallet.credit(payout);
+    const before = vip.index();
+    vip.accrue(bet);
     history.add({ game: gameId, bet: round2(bet), mult, payout, nonce, t: Date.now() });
+    const after = vip.index();
+    if (after > before) R.ui.toast(`VIP level up: ${VIP_LEVELS[after].name}! Rakeback is now ${Math.round(VIP_LEVELS[after].rb * 100)}% of the house edge.`, "success");
+    vip.emit();
     return payout;
   };
 
@@ -281,6 +330,84 @@
     $('[data-a="half"]', wrap).onclick = () => api.set(api.get() / 2);
     $('[data-a="double"]', wrap).onclick = () => api.set(Math.min(Math.max(api.get() * 2, 0.01), Math.max(wallet.balance, 0.01)));
     return api;
+  };
+
+  /** Manual / Auto betting tabs. `playOnce(amount)` must resolve to {payout} (or null to stop).
+   *  `manualEls` are hidden in Auto mode. Returns {stop, running()}. */
+  ui.betModes = function ({ controls, bet, manualEls, playOnce, delay = 250 }) {
+    const tabs = el(`<div class="tabs"><button class="on" data-m="manual">Manual</button><button data-m="auto">Auto</button></div>`);
+    controls.prepend(tabs);
+    const panel = el(`<div style="display:none;flex-direction:column;gap:12px">
+      <div class="field"><div class="label"><span>Number of bets</span><span>0 = unlimited</span></div>
+        <div class="input-group"><input class="input" type="number" min="0" step="1" data-k="count" value="10"><span class="input-suffix">bets</span></div></div>
+      <div class="field"><div class="label">On win</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div class="seg" data-k="winMode"><button class="on" data-v="reset">Reset</button><button data-v="inc">Increase</button></div>
+        <div class="input-group"><input class="input" type="number" min="0" step="1" data-k="winPct" value="0"><span class="input-suffix">%</span></div></div></div>
+      <div class="field"><div class="label">On loss</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div class="seg" data-k="lossMode"><button class="on" data-v="reset">Reset</button><button data-v="inc">Increase</button></div>
+        <div class="input-group"><input class="input" type="number" min="0" step="1" data-k="lossPct" value="0"><span class="input-suffix">%</span></div></div></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div class="field"><div class="label">Stop on profit</div><div class="input-group"><input class="input" type="number" min="0" step="0.01" data-k="stopProfit" value="0"></div></div>
+        <div class="field"><div class="label">Stop on loss</div><div class="input-group"><input class="input" type="number" min="0" step="0.01" data-k="stopLoss" value="0"></div></div>
+      </div>
+      <button class="btn btn-violet btn-block btn-lg" data-k="start">Start autobet</button>
+      <div class="muted" style="font-size:12px;min-height:16px" data-k="status"></div>
+    </div>`);
+    controls.appendChild(panel);
+    const q = (k) => $(`[data-k="${k}"]`, panel);
+    const modes = { winMode: "reset", lossMode: "reset" };
+    ["winMode", "lossMode"].forEach((k) => {
+      $$("button", q(k)).forEach((b) => (b.onclick = () => {
+        modes[k] = b.dataset.v;
+        $$("button", q(k)).forEach((x) => x.classList.toggle("on", x === b));
+      }));
+    });
+    let running = false;
+    const num = (k) => Math.max(0, parseFloat(q(k).value) || 0);
+    function setMode(m) {
+      $$("button", tabs).forEach((b) => b.classList.toggle("on", b.dataset.m === m));
+      panel.style.display = m === "auto" ? "flex" : "none";
+      manualEls.forEach((x) => (x.style.display = m === "auto" ? "none" : ""));
+    }
+    $$("button", tabs).forEach((b) => (b.onclick = () => { if (!running) setMode(b.dataset.m); }));
+    function lock(b) {
+      running = b;
+      bet.disable(b);
+      $$("input,.seg button", panel).forEach((x) => (x.disabled = b));
+      $$("button", tabs).forEach((x) => (x.disabled = b));
+      const st = q("start");
+      st.textContent = b ? "Stop autobet" : "Start autobet";
+      st.className = `btn ${b ? "btn-loss" : "btn-violet"} btn-block btn-lg`;
+    }
+    async function run() {
+      lock(true);
+      const base = bet.get();
+      let amount = base, profit = 0, n = 0;
+      const count = Math.floor(num("count")) || Infinity;
+      const stopProfit = num("stopProfit"), stopLoss = num("stopLoss");
+      let reason = "Stopped";
+      while (running && n < count) {
+        if (!wallet.canAfford(amount)) { reason = "Not enough coins"; break; }
+        const r = await playOnce(amount);
+        if (!r) break;
+        n++;
+        profit = round2(profit + r.payout - amount);
+        const won = r.payout > amount;
+        const mode = won ? modes.winMode : modes.lossMode;
+        const pct = won ? num("winPct") : num("lossPct");
+        amount = mode === "reset" ? base : round2(amount * (1 + pct / 100));
+        bet.set(amount);
+        q("status").textContent = `${n} bet${n === 1 ? "" : "s"} · profit ${profit >= 0 ? "+" : ""}${fmt(profit)}`;
+        if (stopProfit > 0 && profit >= stopProfit) { reason = "Hit profit target"; break; }
+        if (stopLoss > 0 && -profit >= stopLoss) { reason = "Hit loss limit"; break; }
+        if (n >= count) { reason = "Finished"; break; }
+        await new Promise((res) => setTimeout(res, delay));
+      }
+      q("status").textContent = `${reason} · ${n} bet${n === 1 ? "" : "s"} · profit ${profit >= 0 ? "+" : ""}${fmt(profit)}`;
+      lock(false);
+    }
+    q("start").onclick = () => (running ? (running = false) : run());
+    return { stop() { running = false; }, running: () => running };
   };
 
   /** Size a canvas to its box at device pixel ratio; calls draw on resize. */

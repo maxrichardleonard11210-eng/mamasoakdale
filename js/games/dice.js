@@ -30,7 +30,8 @@
       controls.appendChild(profitField);
       const btn = el(`<button class="btn btn-accent btn-block btn-lg">Roll dice</button>`);
       controls.appendChild(btn);
-      controls.appendChild(el(`<p class="muted" style="margin:0;font-size:12px">Tip: press <b>Space</b> to roll.</p>`));
+      const tip = el(`<p class="muted" style="margin:0;font-size:12px">Tip: press <b>Space</b> to roll.</p>`);
+      controls.appendChild(tip);
 
       stage.innerHTML = `
         <div class="pills" data-pills></div>
@@ -90,10 +91,11 @@
       [chanceIn, multIn].forEach((i) => i.addEventListener("blur", () => render()));
       bet.onChange(() => render());
 
-      function play() {
-        if (busy) return;
-        const amount = bet.get();
-        if (!R.wallet.debit(amount)) return;
+      function play(amt) {
+        return new Promise((resolve) => {
+        if (busy) return resolve(null);
+        const amount = amt != null ? amt : bet.get();
+        if (!R.wallet.debit(amount)) return resolve(null);
         busy = true;
         btn.disabled = true;
         const { floats, nonce } = R.fair.next(1);
@@ -106,24 +108,30 @@
         cube.textContent = r.toFixed(2);
         setTimeout(() => {
           marker.classList.add(won ? "won" : "lost");
-          R.settle("dice", amount, won ? m : 0, nonce);
+          const payout = R.settle("dice", amount, won ? m : 0, nonce);
           recent.unshift({ r, won });
           if (recent.length > 12) recent.pop();
           pills.innerHTML = recent.map((x) => `<span class="pill ${x.won ? "win" : "loss"}">${x.r.toFixed(2)}</span>`).join("");
           busy = false;
           btn.disabled = false;
+          resolve({ payout });
         }, 280);
+        });
       }
-      btn.onclick = play;
+      btn.onclick = () => play();
+      const modes = R.ui.betModes({ controls, bet, manualEls: [btn, tip], playOnce: play, delay: 120 });
       const onKey = (e) => {
         if (e.code === "Space" && !/INPUT|SELECT|TEXTAREA|BUTTON/.test(document.activeElement.tagName) && !document.querySelector(".modal-backdrop")) {
           e.preventDefault();
-          play();
+          if (!modes.running()) play();
         }
       };
       document.addEventListener("keydown", onKey);
       render();
-      return () => document.removeEventListener("keydown", onKey);
+      return () => {
+        modes.stop();
+        document.removeEventListener("keydown", onKey);
+      };
     },
   });
 })();
